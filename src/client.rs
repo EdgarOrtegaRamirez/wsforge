@@ -2,14 +2,14 @@
 //!
 //! Connects to WebSocket servers, sends/receives messages, and captures sessions.
 
-use tokio_tungstenite::connect_async;
-use tungstenite::Message;
 use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
+use log::{debug, info, warn};
 use std::time::Duration;
-use log::{info, debug, warn};
+use tokio_tungstenite::connect_async;
+use tungstenite::Message;
 
-use crate::protocol::{Session, FrameType, Direction};
+use crate::protocol::{Direction, FrameType, Session};
 
 /// A WebSocket client that can connect, send, and receive messages
 pub struct WsClient {
@@ -52,43 +52,20 @@ impl WsClient {
             Message::text(message.to_string())
         };
 
-        socket.send(ws_msg.clone())
+        socket
+            .send(ws_msg.clone())
             .await
             .map_err(|e| format!("Send failed: {}", e))?;
-        self.session.add_message(
-            ws_frame_type(&ws_msg),
-            message.to_string(),
-            Direction::Sent,
-        );
+        self.session
+            .add_message(ws_frame_type(&ws_msg), message.to_string(), Direction::Sent);
 
         info!("Sent: {}", message);
 
         // Wait for response with timeout
-        loop {
-            match tokio::time::timeout(self.timeout, async {
-                socket.next().await
-            }).await {
-                Ok(Some(Ok(frame))) => {
-                    let text = msg_to_string(&frame);
-                    self.session.add_message(
-                        ws_frame_type(&frame),
-                        text.clone(),
-                        Direction::Received,
-                    );
-                    info!("Received: {}", text);
-                    return Ok(());
-                }
-                Ok(Some(Err(e))) => return Err(format!("Receive error: {}", e)),
-                Ok(None) => {
-                    warn!("Stream ended");
-                    return Ok(());
-                }
-                Err(_) => {
-                    warn!("Timeout after {}s", self.timeout.as_secs());
-                    return Ok(());
-                }
-            }
-        }
+        tokio::time::timeout(self.timeout, async { socket.next().await })
+            .await
+            .map_err(|_| format!("Timeout after {}s", self.timeout.as_secs()))?;
+        Ok(())
     }
 
     /// Capture a full session: connect, send message, receive all responses until close
@@ -108,7 +85,8 @@ impl WsClient {
         } else {
             Message::text(send_message.to_string())
         };
-        socket.send(ws_msg.clone())
+        socket
+            .send(ws_msg.clone())
             .await
             .map_err(|e| format!("Send failed: {}", e))?;
         self.session.add_message(
@@ -119,15 +97,18 @@ impl WsClient {
 
         // Receive messages until close or timeout
         loop {
-            match tokio::time::timeout(self.timeout, async {
-                socket.next().await
-            }).await {
+            match tokio::time::timeout(self.timeout, async { socket.next().await }).await {
                 Ok(Some(Ok(frame))) => {
                     let text = msg_to_string(&frame);
                     let frame_type = ws_frame_type(&frame);
 
-                    self.session.add_message(frame_type.clone(), text.clone(), Direction::Received);
-                    debug!("Received {} message: {}", frame_type, text.chars().take(200).collect::<String>());
+                    self.session
+                        .add_message(frame_type.clone(), text.clone(), Direction::Received);
+                    debug!(
+                        "Received {} message: {}",
+                        frame_type,
+                        text.chars().take(200).collect::<String>()
+                    );
 
                     if frame.is_close() {
                         break;

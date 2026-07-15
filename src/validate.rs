@@ -3,8 +3,7 @@
 //! Validates messages against a simplified JSON schema format.
 //! Supports: object (with required/optional fields), array, string, number, boolean, enum.
 
-use serde_json::{Value, Map};
-use log::{debug, warn};
+use serde_json::{Map, Value};
 
 /// A simplified JSON schema for WebSocket message validation
 #[derive(Debug, Clone)]
@@ -38,6 +37,12 @@ pub struct ValidationResult {
     pub valid: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
+}
+
+impl Default for ValidationResult {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ValidationResult {
@@ -81,7 +86,11 @@ fn validate_value(value: &Value, schema: &Schema, result: &mut ValidationResult,
             validate_object(map, schema, result, path);
         }
         (SchemaType::Object, _) => {
-            result.add_error(format!("{}: expected object, got {}", path, value_type_name(value)));
+            result.add_error(format!(
+                "{}: expected object, got {}",
+                path,
+                value_type_name(value)
+            ));
         }
         (SchemaType::Array, Value::Array(items)) => {
             if let Some(item_schema) = &schema.items {
@@ -91,25 +100,45 @@ fn validate_value(value: &Value, schema: &Schema, result: &mut ValidationResult,
             }
         }
         (SchemaType::Array, _) => {
-            result.add_error(format!("{}: expected array, got {}", path, value_type_name(value)));
+            result.add_error(format!(
+                "{}: expected array, got {}",
+                path,
+                value_type_name(value)
+            ));
         }
         (SchemaType::String, Value::String(_)) => {}
         (SchemaType::String, _) => {
-            result.add_error(format!("{}: expected string, got {}", path, value_type_name(value)));
+            result.add_error(format!(
+                "{}: expected string, got {}",
+                path,
+                value_type_name(value)
+            ));
         }
         (SchemaType::Number, Value::Number(_)) => {}
         (SchemaType::Number, _) => {
-            result.add_error(format!("{}: expected number, got {}", path, value_type_name(value)));
+            result.add_error(format!(
+                "{}: expected number, got {}",
+                path,
+                value_type_name(value)
+            ));
         }
         (SchemaType::Boolean, Value::Bool(_)) => {}
         (SchemaType::Boolean, _) => {
-            result.add_error(format!("{}: expected boolean, got {}", path, value_type_name(value)));
+            result.add_error(format!(
+                "{}: expected boolean, got {}",
+                path,
+                value_type_name(value)
+            ));
         }
         (SchemaType::Enum(values), v) => {
             let s = match v {
                 Value::String(s) => s.as_str(),
                 _ => {
-                    result.add_error(format!("{}: expected string for enum, got {}", path, value_type_name(v)));
+                    result.add_error(format!(
+                        "{}: expected string for enum, got {}",
+                        path,
+                        value_type_name(v)
+                    ));
                     return;
                 }
             };
@@ -120,7 +149,12 @@ fn validate_value(value: &Value, schema: &Schema, result: &mut ValidationResult,
     }
 }
 
-fn validate_object(map: &Map<String, Value>, schema: &Schema, result: &mut ValidationResult, path: &str) {
+fn validate_object(
+    map: &Map<String, Value>,
+    schema: &Schema,
+    result: &mut ValidationResult,
+    path: &str,
+) {
     // Check required fields
     for req in &schema.required {
         if !map.contains_key(req.as_str()) {
@@ -130,10 +164,16 @@ fn validate_object(map: &Map<String, Value>, schema: &Schema, result: &mut Valid
 
     // Validate known properties (only check non-required fields, since required check above handles those)
     if let Some(properties) = &schema.properties {
-        let required_set: std::collections::HashSet<&str> = schema.required.iter().map(|s| s.as_str()).collect();
+        let required_set: std::collections::HashSet<&str> =
+            schema.required.iter().map(|s| s.as_str()).collect();
         for prop in properties {
             if let Some(value) = map.get(prop.name.as_str()) {
-                validate_value(value, &prop.schema, result, &format!("{}.{}", path, prop.name));
+                validate_value(
+                    value,
+                    &prop.schema,
+                    result,
+                    &format!("{}.{}", path, prop.name),
+                );
             } else if !prop.optional && !required_set.contains(prop.name.as_str()) {
                 // Only report if not already caught by required check
                 result.add_error(format!("{}: missing required field '{}'", path, prop.name));
@@ -165,10 +205,11 @@ fn value_type_name(value: &Value) -> &'static str {
 
 /// Parse a simple schema from JSON
 pub fn parse_schema(json: &str) -> Result<Schema, String> {
-    let value: Value = serde_json::from_str(json)
-        .map_err(|e| format!("Invalid schema JSON: {}", e))?;
+    let value: Value =
+        serde_json::from_str(json).map_err(|e| format!("Invalid schema JSON: {}", e))?;
 
-    let obj = value.as_object()
+    let obj = value
+        .as_object()
         .ok_or_else(|| "Schema must be a JSON object".to_string())?;
 
     let r#type = match obj.get("type").and_then(|v| v.as_str()) {
@@ -178,10 +219,16 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
         Some("number") => SchemaType::Number,
         Some("boolean") => SchemaType::Boolean,
         Some("enum") => {
-            let items = obj.get("enum")
+            let items = obj
+                .get("enum")
                 .and_then(|v| v.as_array())
                 .ok_or_else(|| "Enum schema missing 'enum' array".to_string())?;
-            SchemaType::Enum(items.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+            SchemaType::Enum(
+                items
+                    .iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect(),
+            )
         }
         Some(t) => return Err(format!("Unsupported schema type: {}", t)),
         None => return Err("Schema missing 'type' field".to_string()),
@@ -192,7 +239,8 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
 
     if r#type == SchemaType::Object {
         if let Some(req) = obj.get("required") {
-            required = req.as_array()
+            required = req
+                .as_array()
                 .ok_or_else(|| "'required' must be an array".to_string())?
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
@@ -201,7 +249,8 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
 
         if let Some(props) = obj.get("properties") {
             for (name, prop_schema) in props.as_object().ok_or("'properties' must be an object")? {
-                let prop_schema = parse_schema(&serde_json::to_string(prop_schema).map_err(|e| e.to_string())?)?;
+                let prop_schema =
+                    parse_schema(&serde_json::to_string(prop_schema).map_err(|e| e.to_string())?)?;
                 let optional = !required.contains(name);
                 properties.push(Property {
                     name: name.clone(),
@@ -214,7 +263,11 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
 
     Ok(Schema {
         r#type,
-        properties: if properties.is_empty() { None } else { Some(properties) },
+        properties: if properties.is_empty() {
+            None
+        } else {
+            Some(properties)
+        },
         required,
         items: None,
     })
@@ -228,13 +281,16 @@ mod tests {
     fn test_valid_object() {
         let schema = Schema {
             r#type: SchemaType::Object,
-            properties: Some(vec![
-                Property {
-                    name: "name".to_string(),
-                    schema: Schema { r#type: SchemaType::String, properties: None, required: Vec::new(), items: None },
-                    optional: false,
+            properties: Some(vec![Property {
+                name: "name".to_string(),
+                schema: Schema {
+                    r#type: SchemaType::String,
+                    properties: None,
+                    required: Vec::new(),
+                    items: None,
                 },
-            ]),
+                optional: false,
+            }]),
             required: vec!["name".to_string()],
             items: None,
         };
@@ -248,13 +304,16 @@ mod tests {
     fn test_missing_required_field() {
         let schema = Schema {
             r#type: SchemaType::Object,
-            properties: Some(vec![
-                Property {
-                    name: "name".to_string(),
-                    schema: Schema { r#type: SchemaType::String, properties: None, required: Vec::new(), items: None },
-                    optional: false,
+            properties: Some(vec![Property {
+                name: "name".to_string(),
+                schema: Schema {
+                    r#type: SchemaType::String,
+                    properties: None,
+                    required: Vec::new(),
+                    items: None,
                 },
-            ]),
+                optional: false,
+            }]),
             required: vec!["name".to_string()],
             items: None,
         };
@@ -296,7 +355,11 @@ mod tests {
     #[test]
     fn test_enum_validation() {
         let schema = Schema {
-            r#type: SchemaType::Enum(vec!["red".to_string(), "green".to_string(), "blue".to_string()]),
+            r#type: SchemaType::Enum(vec![
+                "red".to_string(),
+                "green".to_string(),
+                "blue".to_string(),
+            ]),
             properties: None,
             required: Vec::new(),
             items: None,

@@ -4,7 +4,6 @@
 
 use serde_json::Value;
 use std::collections::HashSet;
-use log::debug;
 
 /// TypeScript type definition
 #[derive(Debug, Clone)]
@@ -42,7 +41,8 @@ impl TypeGenerator {
             }];
         }
 
-        let types = samples.iter()
+        let types = samples
+            .iter()
             .filter_map(|s| {
                 let value: Value = serde_json::from_str(s).ok()?;
                 Some(self.json_to_ts(&value))
@@ -73,7 +73,8 @@ impl TypeGenerator {
         }
 
         let mut import_set: HashSet<String> = HashSet::new();
-        let types = samples.iter()
+        let types = samples
+            .iter()
             .filter_map(|s| {
                 let value: Value = serde_json::from_str(s).ok()?;
                 let py_type = self.json_to_python(&value, &mut import_set);
@@ -103,30 +104,26 @@ impl TypeGenerator {
         match value {
             Value::Null => "undefined".to_string(),
             Value::Bool(_) => "boolean".to_string(),
-            Value::Number(n) => {
-                if n.is_f64() {
-                    "number".to_string()
-                } else {
-                    "number".to_string()
-                }
-            }
+            Value::Number(_) => "number".to_string(),
             Value::String(_) => "string".to_string(),
             Value::Array(items) => {
                 if items.is_empty() {
                     "unknown[]".to_string()
                 } else {
-                    let item_types: HashSet<&str> = items.iter()
-                        .filter_map(|v| Some(json_ts_type(v)))
-                        .collect();
+                    let item_types: HashSet<&str> = items.iter().map(|v| json_ts_type(v)).collect();
                     if item_types.len() == 1 {
                         format!("{}[]", item_types.into_iter().next().unwrap())
                     } else {
-                        format!("({})[]", item_types.iter().copied().collect::<Vec<_>>().join(" | "))
+                        format!(
+                            "({})[]",
+                            item_types.iter().copied().collect::<Vec<_>>().join(" | ")
+                        )
                     }
                 }
             }
             Value::Object(map) => {
-                let fields: Vec<String> = map.iter()
+                let fields: Vec<String> = map
+                    .iter()
                     .map(|(k, v)| format!("{}?: {}", k, json_ts_type(v)))
                     .collect();
                 format!("{{ {} }}", fields.join("; "))
@@ -154,8 +151,9 @@ impl TypeGenerator {
                 if items.is_empty() {
                     "List[object]".to_string()
                 } else {
-                    let item_types: HashSet<String> = items.iter()
-                        .filter_map(|v| Some(self.json_py_type(v, import_set)))
+                    let item_types: HashSet<String> = items
+                        .iter()
+                        .map(|v| self.json_py_type(v, import_set))
                         .collect();
                     if item_types.len() == 1 {
                         format!("List[{}]", item_types.into_iter().next().unwrap())
@@ -167,20 +165,30 @@ impl TypeGenerator {
                 }
             }
             Value::Object(map) => {
-                let mut class_name = format!("{}{}", self.type_name, capitalize(&map.keys().next().map(|k| k.as_str()).unwrap_or("Data")));
+                let mut class_name = format!(
+                    "{}{}",
+                    self.type_name,
+                    capitalize(map.keys().next().map(|k| k.as_str()).unwrap_or("Data"))
+                );
                 if map.len() > 1 {
                     // If multiple top-level objects have different names, just use base name
                     class_name = self.type_name.clone();
                 }
 
-                let fields: Vec<String> = map.iter()
+                let fields: Vec<String> = map
+                    .iter()
                     .map(|(k, v)| {
                         let py_type = self.json_py_type(v, import_set);
                         format!("    {}: {}", k, py_type)
                     })
                     .collect();
 
-                format!("class {}({}):\n{}", class_name, "TypedDict", fields.join("\n"))
+                format!(
+                    "class {}({}):\n{}",
+                    class_name,
+                    "TypedDict",
+                    fields.join("\n")
+                )
             }
         }
     }

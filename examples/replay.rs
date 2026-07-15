@@ -1,6 +1,6 @@
 //! Example: Replay a captured session
-use wsforge::replay::ReplaySession;
 use wsforge::protocol::Session;
+use wsforge::replay::ReplaySession;
 
 fn main() {
     let session = Session::new("wss://echo.websocket.org");

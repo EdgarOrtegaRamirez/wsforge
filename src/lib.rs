@@ -6,15 +6,18 @@
 //! - Capture and replay message sessions
 //! - Validate messages against JSON schemas
 //! - Auto-generate TypeScript/Python types from message samples
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(clippy::single_component_path_imports)]
 
 pub mod client;
 pub mod protocol;
 pub mod replay;
-pub mod validate;
 pub mod types;
+pub mod validate;
 
 pub use client::WsClient;
-pub use protocol::{FrameType, Message, CloseFrame};
-pub use validate::validate;
+pub use protocol::{CloseFrame, FrameType, Message};
 pub use replay::ReplaySession;
-pub use types::{TypeScriptType, PythonType, TypeGenerator};
+pub use types::{PythonType, TypeGenerator, TypeScriptType};
+pub use validate::validate;

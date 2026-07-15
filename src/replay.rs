@@ -3,8 +3,6 @@
 //! Replay captured WebSocket sessions with configurable timing.
 
 use crate::protocol::Session;
-use serde_json;
-use log::{info, debug};
 
 /// Replay a captured session against a WebSocket server
 pub struct ReplaySession {
@@ -15,7 +13,11 @@ pub struct ReplaySession {
 
 impl ReplaySession {
     pub fn new(session: Session, speed: f64, repeat: u32) -> Self {
-        Self { session, speed, repeat }
+        Self {
+            session,
+            speed,
+            repeat,
+        }
     }
 
     /// Print a summary of the session
@@ -30,8 +32,18 @@ impl ReplaySession {
             lines.push(format!("Close: {} ({})", cf.code, cf.reason));
         }
 
-        let sent = self.session.messages.iter().filter(|m| m.direction == crate::protocol::Direction::Sent).count();
-        let received = self.session.messages.iter().filter(|m| m.direction == crate::protocol::Direction::Received).count();
+        let sent = self
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.direction == crate::protocol::Direction::Sent)
+            .count();
+        let received = self
+            .session
+            .messages
+            .iter()
+            .filter(|m| m.direction == crate::protocol::Direction::Received)
+            .count();
         lines.push(format!("Sent: {} | Received: {}", sent, received));
 
         lines.join("\n")
@@ -42,7 +54,10 @@ impl ReplaySession {
         let mut md = String::new();
         md.push_str("# WebSocket Session Report\n\n");
         md.push_str(&format!("**URL:** {}\n\n", self.session.url));
-        md.push_str(&format!("**Messages:** {}\n\n", self.session.message_count()));
+        md.push_str(&format!(
+            "**Messages:** {}\n\n",
+            self.session.message_count()
+        ));
         md.push_str("| # | Direction | Type | Payload |\n");
         md.push_str("|---|-----------|------|---------|\n");
 
@@ -73,8 +88,7 @@ impl ReplaySession {
 
     /// Parse a session from JSON
     pub fn from_json(json: &str) -> Result<Session, String> {
-        serde_json::from_str(json)
-            .map_err(|e| format!("Failed to parse session JSON: {}", e))
+        serde_json::from_str(json).map_err(|e| format!("Failed to parse session JSON: {}", e))
     }
 
     /// Validate that a session has at least one message
@@ -86,7 +100,7 @@ impl ReplaySession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{Message as WsMessage, FrameType, Direction};
+    use crate::protocol::{Direction, FrameType, Message as WsMessage};
 
     #[test]
     fn test_session_summary() {

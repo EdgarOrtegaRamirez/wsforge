@@ -121,17 +121,13 @@ mod tests {
         let session = Session::new("ws://example.com");
         assert_eq!(session.url, "ws://example.com");
         assert_eq!(session.message_count(), 0);
-        assert!(session.started_at.len() > 0);
+        assert!(!session.started_at.is_empty());
     }
 
     #[test]
     fn test_add_message() {
         let mut session = Session::new("ws://example.com");
-        session.add_message(
-            FrameType::Text,
-            "hello".to_string(),
-            Direction::Sent,
-        );
+        session.add_message(FrameType::Text, "hello".to_string(), Direction::Sent);
         assert_eq!(session.message_count(), 1);
         assert_eq!(session.text_messages().len(), 1);
     }
@@ -154,11 +150,7 @@ mod tests {
     #[test]
     fn test_close_frame() {
         let mut session = Session::new("ws://example.com");
-        session.add_message(
-            FrameType::Text,
-            "hello".to_string(),
-            Direction::Received,
-        );
+        session.add_message(FrameType::Text, "hello".to_string(), Direction::Received);
         session.set_close(1000, "Normal closure".to_string());
         assert!(session.ended_at.is_some());
         assert!(session.close_frame.is_some());

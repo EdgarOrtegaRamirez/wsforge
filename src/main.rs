@@ -1,17 +1,19 @@
 //! WSForge — Comprehensive WebSocket CLI and Protocol Analyzer
 //!
 //! A Rust CLI tool for analyzing, debugging, and validating WebSocket connections.
+#![allow(dead_code)]
+#![allow(unused_imports)]
 
 mod cli;
 mod client;
 mod protocol;
 mod replay;
-mod validate;
 mod types;
+mod validate;
 
-use cli::{Cli, Commands};
 use clap::Parser;
-use log::{info, debug};
+use cli::{Cli, Commands};
+use log::{debug, info};
 
 #[tokio::main]
 async fn main() {
@@ -37,7 +39,12 @@ async fn main() {
                         println!("Session: {}", session.url);
                         println!("Messages: {}", session.message_count());
                         for msg in session.messages.iter() {
-                            println!("  {} [{}] {}", msg.direction, msg.frame_type, msg.payload.chars().take(200).collect::<String>());
+                            println!(
+                                "  {} [{}] {}",
+                                msg.direction,
+                                msg.frame_type,
+                                msg.payload.chars().take(200).collect::<String>()
+                            );
                         }
                     }
                     Err(e) => {
@@ -141,15 +148,31 @@ async fn main() {
                     println!("|------|-------|--------|----------|");
                     for (i, r) in &results {
                         let status = if r.valid { "✓" } else { "✗" };
-                        println!("| {} | {} | {} | {} |", i, status, r.errors.len(), r.warnings.len());
+                        println!(
+                            "| {} | {} | {} | {} |",
+                            i,
+                            status,
+                            r.errors.len(),
+                            r.warnings.len()
+                        );
                     }
                     println!();
-                    println!("**Total:** {} | **Valid:** {} | **Invalid:** {}", results.len(), total_valid, total_invalid);
+                    println!(
+                        "**Total:** {} | **Valid:** {} | **Invalid:** {}",
+                        results.len(),
+                        total_valid,
+                        total_invalid
+                    );
                 }
                 _ => {
                     println!("Validation Report");
                     println!("=================");
-                    println!("Total: {} | Valid: {} | Invalid: {}", results.len(), total_valid, total_invalid);
+                    println!(
+                        "Total: {} | Valid: {} | Invalid: {}",
+                        results.len(),
+                        total_valid,
+                        total_invalid
+                    );
                     println!();
                     for (i, r) in &results {
                         if r.valid {
@@ -178,7 +201,8 @@ async fn main() {
                 std::process::exit(1);
             });
 
-            let samples: Vec<String> = samples_data.lines()
+            let samples: Vec<String> = samples_data
+                .lines()
                 .filter(|l| !l.trim().is_empty())
                 .map(|l| l.trim().to_string())
                 .collect();
@@ -204,7 +228,10 @@ async fn main() {
                     }
                 }
                 _ => {
-                    eprintln!("Unsupported language: {}. Use 'typescript' or 'python'.", language);
+                    eprintln!(
+                        "Unsupported language: {}. Use 'typescript' or 'python'.",
+                        language
+                    );
                     std::process::exit(1);
                 }
             }
@@ -212,7 +239,14 @@ async fn main() {
 
         Commands::Inspect { url } => {
             println!("WebSocket URL: {}", url);
-            println!("Protocol: {}", if url.starts_with("wss://") { "wss (TLS)" } else { "ws (plain)" });
+            println!(
+                "Protocol: {}",
+                if url.starts_with("wss://") {
+                    "wss (TLS)"
+                } else {
+                    "ws (plain)"
+                }
+            );
 
             // Parse the URL
             if let Ok(parsed) = url::Url::parse(&url) {
@@ -238,15 +272,13 @@ async fn main() {
                 Ok(session) => {
                     let replay = replay::ReplaySession::new(session, 1.0, 1);
                     match format.as_str() {
-                        "json" => {
-                            match replay.to_json() {
-                                Ok(json) => println!("{}", json),
-                                Err(e) => {
-                                    eprintln!("Error: {}", e);
-                                    std::process::exit(1);
-                                }
+                        "json" => match replay.to_json() {
+                            Ok(json) => println!("{}", json),
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                                std::process::exit(1);
                             }
-                        }
+                        },
                         "markdown" => {
                             println!("{}", replay.to_markdown());
                         }
@@ -254,7 +286,12 @@ async fn main() {
                             println!("{}", replay.summary());
                             println!();
                             for msg in replay.session.messages.iter() {
-                                println!("{} [{}] {}", msg.direction, msg.frame_type, msg.payload.chars().take(200).collect::<String>());
+                                println!(
+                                    "{} [{}] {}",
+                                    msg.direction,
+                                    msg.frame_type,
+                                    msg.payload.chars().take(200).collect::<String>()
+                                );
                             }
                         }
                     }

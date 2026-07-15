@@ -112,7 +112,9 @@ pub enum Commands {
 pub fn read_session(input: &PathBuf) -> Result<String, String> {
     if input.as_os_str().is_empty() || input.as_os_str() == "-" {
         let mut buffer = String::new();
-        std::io::stdin().read_line(&mut buffer).map_err(|e| e.to_string())?;
+        std::io::stdin()
+            .read_line(&mut buffer)
+            .map_err(|e| e.to_string())?;
         Ok(buffer)
     } else {
         fs::read_to_string(input).map_err(|e| format!("Failed to read {}: {}", input.display(), e))
