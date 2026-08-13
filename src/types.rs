@@ -15,6 +15,7 @@ pub struct TypeScriptType {
 /// Python type definition
 #[derive(Debug, Clone)]
 pub struct PythonType {
+    #[allow(dead_code)]
     pub name: String,
     pub definition: String,
     pub imports: Vec<String>,

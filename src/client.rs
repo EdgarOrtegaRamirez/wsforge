@@ -29,6 +29,7 @@ impl WsClient {
         &self.session
     }
 
+    #[allow(dead_code)]
     pub fn session_mut(&mut self) -> &mut Session {
         &mut self.session
     }
@@ -62,13 +63,28 @@ impl WsClient {
         info!("Sent: {}", message);
 
         // Wait for response with timeout
-        tokio::time::timeout(self.timeout, async { socket.next().await })
+        let res = tokio::time::timeout(self.timeout, async { socket.next().await })
             .await
             .map_err(|_| format!("Timeout after {}s", self.timeout.as_secs()))?;
+
+        match res {
+            Some(Ok(frame)) => {
+                let text = msg_to_string(&frame);
+                let frame_type = ws_frame_type(&frame);
+                self.session.add_message(frame_type, text, Direction::Received);
+            }
+            Some(Err(e)) => {
+                return Err(format!("Receive error: {}", e));
+            }
+            None => {
+                debug!("Connection closed without response");
+            }
+        }
         Ok(())
     }
 
     /// Capture a full session: connect, send message, receive all responses until close
+    #[allow(dead_code)]
     pub async fn capture_session(
         &mut self,
         url: &str,

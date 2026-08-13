@@ -236,6 +236,7 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
 
     let mut required = Vec::new();
     let mut properties = Vec::new();
+    let mut items = None;
 
     if r#type == SchemaType::Object {
         if let Some(req) = obj.get("required") {
@@ -259,6 +260,12 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
                 });
             }
         }
+    } else if r#type == SchemaType::Array {
+        if let Some(items_val) = obj.get("items") {
+            let items_schema =
+                parse_schema(&serde_json::to_string(items_val).map_err(|e| e.to_string())?)?;
+            items = Some(Box::new(items_schema));
+        }
     }
 
     Ok(Schema {
@@ -269,7 +276,7 @@ pub fn parse_schema(json: &str) -> Result<Schema, String> {
             Some(properties)
         },
         required,
-        items: None,
+        items,
     })
 }
 
@@ -370,5 +377,24 @@ mod tests {
 
         let result = validate(r#""yellow""#, &schema);
         assert!(!result.valid);
+    }
+
+    #[test]
+    fn test_array_items_validation() {
+        let json_schema = r#"{
+            "type": "array",
+            "items": {
+                "type": "number"
+            }
+        }"#;
+        let schema = parse_schema(json_schema).unwrap();
+
+        let valid_result = validate("[1, 2, 3]", &schema);
+        assert!(valid_result.valid);
+
+        let invalid_result = validate("[1, \"two\", 3]", &schema);
+        assert!(!invalid_result.valid);
+        assert_eq!(invalid_result.errors.len(), 1);
+        assert!(invalid_result.errors[0].contains("root[1]"));
     }
 }
