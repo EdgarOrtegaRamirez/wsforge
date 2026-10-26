@@ -7,7 +7,9 @@ use crate::protocol::Session;
 /// Replay a captured session against a WebSocket server
 pub struct ReplaySession {
     pub session: Session,
+    #[allow(dead_code)]
     pub speed: f64,
+    #[allow(dead_code)]
     pub repeat: u32,
 }
 
@@ -92,6 +94,7 @@ impl ReplaySession {
     }
 
     /// Validate that a session has at least one message
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.session.message_count() == 0
     }
@@ -100,7 +103,7 @@ impl ReplaySession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{Direction, FrameType, Message as WsMessage};
+    use crate::protocol::{Direction, FrameType};
 
     #[test]
     fn test_session_summary() {

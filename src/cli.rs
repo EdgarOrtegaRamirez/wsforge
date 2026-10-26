@@ -111,9 +111,10 @@ pub enum Commands {
 /// Read session data from a file or stdin
 pub fn read_session(input: &PathBuf) -> Result<String, String> {
     if input.as_os_str().is_empty() || input.as_os_str() == "-" {
+        use std::io::Read;
         let mut buffer = String::new();
         std::io::stdin()
-            .read_line(&mut buffer)
+            .read_to_string(&mut buffer)
             .map_err(|e| e.to_string())?;
         Ok(buffer)
     } else {

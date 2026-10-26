@@ -88,6 +88,7 @@ impl Session {
         });
     }
 
+    #[allow(dead_code)]
     pub fn set_close(&mut self, code: u16, reason: String) {
         self.ended_at = Some(chrono::Utc::now().to_rfc3339());
         self.close_frame = Some(CloseFrame { code, reason });
@@ -97,6 +98,7 @@ impl Session {
         self.messages.len()
     }
 
+    #[allow(dead_code)]
     pub fn text_messages(&self) -> Vec<&Message> {
         self.messages
             .iter()
@@ -104,6 +106,7 @@ impl Session {
             .collect()
     }
 
+    #[allow(dead_code)]
     pub fn binary_messages(&self) -> Vec<&Message> {
         self.messages
             .iter()

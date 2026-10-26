@@ -1,8 +1,6 @@
 //! WSForge — Comprehensive WebSocket CLI and Protocol Analyzer
 //!
 //! A Rust CLI tool for analyzing, debugging, and validating WebSocket connections.
-#![allow(dead_code)]
-#![allow(unused_imports)]
 
 mod cli;
 mod client;
@@ -13,7 +11,7 @@ mod validate;
 
 use clap::Parser;
 use cli::{Cli, Commands};
-use log::{debug, info};
+use log::info;
 
 #[tokio::main]
 async fn main() {
@@ -305,19 +303,3 @@ async fn main() {
     }
 }
 
-/// Output format for CLI commands
-enum OutputFormat {
-    Text,
-    Json,
-    Markdown,
-}
-
-impl cli::Cli {
-    fn output_format(&self, format: &str) -> OutputFormat {
-        match format {
-            "json" => OutputFormat::Json,
-            "markdown" => OutputFormat::Markdown,
-            _ => OutputFormat::Text,
-        }
-    }
-}

@@ -6,10 +6,6 @@
 //! - Capture and replay message sessions
 //! - Validate messages against JSON schemas
 //! - Auto-generate TypeScript/Python types from message samples
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(clippy::single_component_path_imports)]
-
 pub mod client;
 pub mod protocol;
 pub mod replay;
